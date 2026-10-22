@@ -1,6 +1,6 @@
 """Role-based response shaping.
 
-Buyer: everything. Supplier: own bids and rank, the anonymous L1 price, participant count,
+Buyer: everything about their own RFQs, nothing about other buyers'. Supplier: own bids and rank, the anonymous L1 price, participant count,
 and an activity log where competitors are anonymous and competitor prices never appear.
 """
 
@@ -65,8 +65,16 @@ def _summary(rfq: Rfq, ranked: list[Bid], viewer: User, now: datetime) -> RfqSum
     )
 
 
+def buyer_can_view(rfq: Rfq, viewer: User) -> bool:
+    """Buyers only ever see their own RFQs; suppliers can open any RFQ."""
+    return viewer.role != Role.BUYER or rfq.buyer_id == viewer.id
+
+
 def list_view(db: Session, viewer: User, now: datetime) -> list[RfqSummary]:
-    rfqs = db.scalars(select(Rfq).order_by(Rfq.bid_start_at.desc(), Rfq.id.desc())).all()
+    query = select(Rfq).order_by(Rfq.bid_start_at.desc(), Rfq.id.desc())
+    if viewer.role == Role.BUYER:
+        query = query.where(Rfq.buyer_id == viewer.id)
+    rfqs = db.scalars(query).all()
     ranked = ranking.latest_bids_by_rfq(db, [r.id for r in rfqs])
     return [_summary(r, ranked.get(r.id, []), viewer, now) for r in rfqs]
 

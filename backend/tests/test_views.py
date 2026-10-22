@@ -1,7 +1,8 @@
 import json
 from datetime import timedelta
 
-from app.enums import TriggerType
+from app.enums import Role, TriggerType
+from app.models import User
 from tests.conftest import T0, as_user, make_rfq, place
 
 CLOSE = T0 + timedelta(minutes=30)
@@ -58,6 +59,33 @@ def test_supplier_listing_shows_l1_and_own_rank(client, clock, db, users):
     assert item["my_rank"] == 2 and item["my_best_bid"] == "1111.11"
     buyer_item = client.get("/api/rfqs", headers=as_user(users["buyer"])).json()["items"][0]
     assert buyer_item["my_rank"] is None
+
+
+def test_buyer_only_sees_own_rfqs(client, clock, db, users):
+    rfq = _setup(client, clock, db, users)
+    other = User(name="Other Buyer", email="other@test", role=Role.BUYER)
+    db.add(other)
+    db.commit()
+    assert client.get("/api/rfqs", headers=as_user(other)).json()["items"] == []
+    r = client.get(f"/api/rfqs/{rfq.id}", headers=as_user(other))
+    assert r.status_code == 404 and "Supplier Alpha" not in r.text
+    assert len(client.get("/api/rfqs", headers=as_user(users["buyer"])).json()["items"]) == 1
+
+
+def test_supplier_sees_rfqs_from_every_buyer(client, clock, db, users):
+    other = User(name="Other Buyer", email="other@test", role=Role.BUYER)
+    db.add(other)
+    db.commit()
+    make_rfq(db, users["buyer"], ref="MINE")
+    make_rfq(db, other, ref="THEIRS")
+    clock.set(T0 + timedelta(minutes=31))  # finished auctions stay listed too
+
+    def refs(user):
+        return {i["reference_id"] for i in client.get("/api/rfqs", headers=as_user(user)).json()["items"]}
+
+    assert refs(users["a"]) == {"MINE", "THEIRS"}
+    assert refs(users["buyer"]) == {"MINE"}
+    assert refs(other) == {"THEIRS"}
 
 
 def test_missing_user_header_is_401(client, users):

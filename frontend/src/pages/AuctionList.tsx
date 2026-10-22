@@ -23,7 +23,12 @@ export function AuctionList() {
       <div className="page-header">
         <div>
           <h1>British Auctions</h1>
-          <p className="muted">All RFQs with British Auction bidding. Times are shown in your local time zone.</p>
+          <p className="muted">
+            {isSupplier
+              ? "RFQs from all buyers with British Auction bidding."
+              : "Your RFQs with British Auction bidding."}{" "}
+            Times are shown in your local time zone.
+          </p>
         </div>
         {user?.role === "BUYER" && (
           <Link className="button" to="/rfqs/new">
@@ -35,7 +40,9 @@ export function AuctionList() {
       {query.isLoading && <p className="muted">Loading…</p>}
       {query.error && <div className="error">{query.error.message}</div>}
       {query.data && query.data.items.length === 0 && (
-        <div className="card empty">No auctions yet.{user?.role === "BUYER" && " Create the first RFQ."}</div>
+        <div className="card empty">
+          {isSupplier ? "No auctions yet. Check back soon." : "You haven't created any RFQs yet. Create your first one."}
+        </div>
       )}
 
       {query.data && query.data.items.length > 0 && (

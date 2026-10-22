@@ -42,7 +42,7 @@ def create_rfq(data: RfqCreate, db: DbSession, clock: ClockDep, buyer: Buyer) ->
 @router.get("/rfqs/{rfq_id}", response_model=RfqDetailResponse)
 def get_rfq(rfq_id: int, db: DbSession, clock: ClockDep, user: CurrentUser) -> RfqDetailResponse:
     rfq = db.get(Rfq, rfq_id)
-    if rfq is None:
+    if rfq is None or not views.buyer_can_view(rfq, user):
         raise not_found("RFQ")
     now = clock.now()
     if resolve_status(rfq, now) != rfq.status:

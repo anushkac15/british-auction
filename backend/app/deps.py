@@ -17,11 +17,10 @@ ClockDep = Annotated[Clock, Depends(get_clock)]
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def get_current_user(
-    db: DbSession,
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
-) -> User:
-    """The acting user comes from the `Authorization: Bearer <token>` header issued at login."""
+Credentials = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)]
+
+
+def user_from_credentials(db: Session, credentials: HTTPAuthorizationCredentials | None) -> User:
     if credentials is None:
         raise AppError(401, "Please log in to continue", "unauthenticated")
     user_id = read_token(credentials.credentials)
@@ -29,6 +28,11 @@ def get_current_user(
     if user is None:
         raise AppError(401, "Your session has expired. Please log in again", "unauthenticated")
     return user
+
+
+def get_current_user(db: DbSession, credentials: Credentials = None) -> User:
+    """The acting user comes from the `Authorization: Bearer <token>` header issued at login."""
+    return user_from_credentials(db, credentials)
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]

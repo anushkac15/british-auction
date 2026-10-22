@@ -76,8 +76,9 @@ cd backend && pytest                                   # or: docker compose exec
 # custom DB: TEST_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db pytest
 ```
 
-The 71 tests cover:
+The 78 tests cover:
 - registration, login, duplicate emails, and tampered or expired tokens
+- the live-update stream rejecting anonymous users, unknown RFQs, and other buyers' RFQs
 - every trigger type and the rank-change cases below
 - window boundaries, including a bid exactly at close being rejected
 - the forced-close cap, with exactly one `EXTENSION_CAPPED` entry
@@ -85,7 +86,7 @@ The 71 tests cover:
 - Decimal precision (`0.10 + 0.20 = 0.30`)
 - quote validity, transit time and create-form rules
 - DB CHECK constraints
-- the supplier view never leaking competitor names or non-L1 prices
+- the supplier view never leaking competitor names or non-L1 prices, and buyers never seeing other buyers' RFQs
 - sweeper idempotency
 - multi-threaded concurrent bids, with no lost extensions and no overshoot of the forced close
 
@@ -139,6 +140,7 @@ The stored `rfqs.status` is a cache. The Celery beat sweeper persists transition
 
 | | Buyer | Supplier |
 |---|---|---|
+| Auction list | Only RFQs they created; other buyers' RFQs return 404 | Every RFQ from every buyer |
 | Ranking | All suppliers with names and full quotes (L1, L2, …) | Only their own row and rank ("L2 of 5") |
 | Prices | Everything | Their own bids and the **current L1 price, without the name** |
 | Activity log | Full | Competitors shown as "A competitor"; competitor prices hidden; extension reasons kept |
@@ -154,11 +156,11 @@ Every response, including errors, contains `server_now`. Money values are JSON s
 | POST | `/api/auth/register` | anyone | `{name, email, password (8+ chars), role: BUYER \| SUPPLIER}`; returns `access_token` and `user` |
 | POST | `/api/auth/login` | anyone | `{email, password}`; returns `access_token` and `user` |
 | GET | `/api/auth/me` | any user | The logged-in account |
-| GET | `/api/rfqs` | any user | Listing: id/ref, name, lowest bid, current close, forced close, status (plus own rank for suppliers) |
+| GET | `/api/rfqs` | any user | Listing: id/ref, name, lowest bid, current close, forced close, status (plus own rank for suppliers). Filtered by role, see above |
 | POST | `/api/rfqs` | buyer | Create an RFQ and its auction config |
-| GET | `/api/rfqs/{id}` | any user | Details, shaped by role |
+| GET | `/api/rfqs/{id}` | owning buyer, any supplier | Details, shaped by role |
 | POST | `/api/rfqs/{id}/bids` | supplier | Returns rank, extension info, and the new close time |
-| GET | `/api/rfqs/{id}/stream` | anyone | SSE `changed` events (payload: RFQ id only) |
+| GET | `/api/rfqs/{id}/stream` | owning buyer, any supplier | SSE `changed` events (payload: RFQ id only). Same bearer token and access rule as the detail endpoint; 401/404 otherwise |
 
 ## Create-form validation (API, mirrored in the UI)
 - The start time is in the future (10 seconds of clock skew tolerated).

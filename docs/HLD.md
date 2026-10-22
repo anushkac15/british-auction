@@ -97,4 +97,6 @@ sequenceDiagram
   `DISTINCT ON (supplier_id) ... ORDER BY created_at DESC`.
 - **Live updates.** Polling is the baseline. SSE is layered on top using Postgres `LISTEN/NOTIFY`
   (notifications are only delivered on commit, so clients never see uncommitted state). The SSE payload is
-  just the RFQ id; clients refetch the role-shaped details, so nothing sensitive is broadcast.
+  just the RFQ id; clients refetch the role-shaped details, so nothing sensitive is broadcast. The stream
+  still requires the bearer token and the detail endpoint's access rule, so outsiders can't watch activity.
+  The SPA reads it with `fetch` (not `EventSource`, which can't send headers), so tokens never go in URLs.

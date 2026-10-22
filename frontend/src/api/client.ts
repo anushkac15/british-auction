@@ -19,6 +19,10 @@ export function setApiToken(token: string | null) {
   authToken = token;
 }
 
+export function authHeaders(): Record<string, string> {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+}
+
 /** Called when a request made with a token comes back 401 (expired or revoked session). */
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
