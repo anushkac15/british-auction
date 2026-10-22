@@ -1,7 +1,8 @@
 # Database Schema (PostgreSQL 16)
 
 Migrations: [`0001_initial.py`](../backend/alembic/versions/0001_initial.py),
-[`0002_user_passwords.py`](../backend/alembic/versions/0002_user_passwords.py).
+[`0002_user_passwords.py`](../backend/alembic/versions/0002_user_passwords.py),
+[`0003_fix_check_constraint_names.py`](../backend/alembic/versions/0003_fix_check_constraint_names.py).
 All timestamps are `TIMESTAMPTZ` stored in UTC. Enums are `VARCHAR` + `CHECK` constraints.
 
 ```mermaid

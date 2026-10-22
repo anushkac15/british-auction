@@ -124,6 +124,15 @@ def test_db_rejects_invalid_rows(db, users, sql):
     db.rollback()
 
 
+def test_check_constraint_names_match_models(db):
+    names = set(db.scalars(text(
+        "SELECT conname FROM pg_constraint WHERE contype = 'c' AND connamespace = 'public'::regnamespace"
+    )))
+    assert len(names) == 15
+    assert not [n for n in names if n.count("ck_") > 1]
+    assert {"ck_bids_transit_positive", "ck_rfqs_close_not_after_forced", "ck_users_role"} <= names
+
+
 def test_db_rejects_bad_bid_rows(db, users):
     rfq = make_rfq(db, users["buyer"])
     insert = text(
