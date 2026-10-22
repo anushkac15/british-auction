@@ -84,6 +84,10 @@ def test_supplier_sees_rfqs_from_every_buyer(client, clock, db, users):
         return {i["reference_id"] for i in client.get("/api/rfqs", headers=as_user(user)).json()["items"]}
 
     assert refs(users["a"]) == {"MINE", "THEIRS"}
+    items = client.get("/api/rfqs", headers=as_user(users["a"])).json()["items"]
+    assert {(i["buyer_id"], i["buyer_name"]) for i in items} == {
+        (users["buyer"].id, "Buyer Co"), (other.id, "Other Buyer"),
+    }
     assert refs(users["buyer"]) == {"MINE"}
     assert refs(other) == {"THEIRS"}
 

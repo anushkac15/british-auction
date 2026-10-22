@@ -46,6 +46,7 @@ def _summary(rfq: Rfq, ranked: list[Bid], viewer: User, now: datetime) -> RfqSum
         id=rfq.id,
         reference_id=rfq.reference_id,
         name=rfq.name,
+        buyer_id=rfq.buyer_id,
         buyer_name=rfq.buyer.name,
         pickup_date=rfq.pickup_date,
         bid_start_at=rfq.bid_start_at,

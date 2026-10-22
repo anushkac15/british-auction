@@ -140,7 +140,7 @@ The stored `rfqs.status` is a cache. The Celery beat sweeper persists transition
 
 | | Buyer | Supplier |
 |---|---|---|
-| Auction list | Only RFQs they created; other buyers' RFQs return 404 | Every RFQ from every buyer |
+| Auction list | Only RFQs they created; other buyers' RFQs return 404 | Every RFQ from every buyer, browsed by buyer: a list of buyers, then each buyer's RFQs (`/buyers/{id}`) |
 | Ranking | All suppliers with names and full quotes (L1, L2, …) | Only their own row and rank ("L2 of 5") |
 | Prices | Everything | Their own bids and the **current L1 price, without the name** |
 | Activity log | Full | Competitors shown as "A competitor"; competitor prices hidden; extension reasons kept |

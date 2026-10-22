@@ -53,6 +53,7 @@ export interface RfqSummary {
   id: number;
   reference_id: string;
   name: string;
+  buyer_id: number;
   buyer_name: string;
   pickup_date: string;
   bid_start_at: string;

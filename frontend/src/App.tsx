@@ -4,6 +4,8 @@ import { UserMenu } from "./components/UserMenu";
 import { useCurrentUser } from "./hooks/useCurrentUser";
 import { AuctionDetail } from "./pages/AuctionDetail";
 import { AuctionList } from "./pages/AuctionList";
+import { BuyerList } from "./pages/BuyerList";
+import { BuyerRfqs } from "./pages/BuyerRfqs";
 import { CreateRfq } from "./pages/CreateRfq";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -24,7 +26,11 @@ export function App() {
         {error && <div className="error">Cannot reach the API: {error.message}</div>}
         {!loading && !error && user && (
           <Routes>
-            <Route path="/" element={<AuctionList />} />
+            <Route path="/" element={user.role === "SUPPLIER" ? <BuyerList /> : <AuctionList />} />
+            <Route
+              path="/buyers/:buyerId"
+              element={user.role === "SUPPLIER" ? <BuyerRfqs /> : <Navigate to="/" replace />}
+            />
             <Route path="/rfqs/new" element={<CreateRfq />} />
             <Route path="/rfqs/:id" element={<AuctionDetail />} />
             <Route path="/login" element={<Navigate to="/" replace />} />

@@ -63,6 +63,7 @@ class RfqSummary(BaseModel):
     id: int
     reference_id: str
     name: str
+    buyer_id: int
     buyer_name: str
     pickup_date: date
     bid_start_at: datetime

@@ -47,8 +47,8 @@ export function AuctionDetail() {
 
   return (
     <section>
-      <Link to="/" className="small">
-        ← All auctions
+      <Link to={isSupplier ? `/buyers/${rfq.buyer_id}` : "/"} className="small">
+        {isSupplier ? `← ${rfq.buyer_name}'s RFQs` : "← All auctions"}
       </Link>
       <div className="page-header">
         <div>
