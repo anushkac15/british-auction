@@ -5,7 +5,7 @@
 #                           Redis (failed-login counts)
 #
 # No Celery worker runs here: auction status is resolved from the server clock on every read and bid,
-# and opening an RFQ persists any missed transitions. docker-compose.prod.yml runs the dedicated worker.
+# and opening an RFQ persists any missed transitions. docker-compose.yml runs the dedicated worker.
 #
 # If Render gives the API a different URL than https://british-auction-api.onrender.com
 # (the name was taken), update the /api/* rewrite on british-auction-web to match.

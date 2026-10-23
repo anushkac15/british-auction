@@ -21,7 +21,7 @@ flowchart LR
 | Auction engine | Bid acceptance, ranking, trigger evaluation, extensions, forced-close cap, activity log. |
 | PostgreSQL | Source of truth. CHECK constraints, generated `total_price`, partial unique index for once-per-RFQ events, row locks, LISTEN/NOTIFY. |
 | Celery beat + worker | Periodic sweeper that persists status transitions (`UPCOMING -> ACTIVE -> CLOSED/FORCE_CLOSED`) and writes their log entries. |
-| Redis | Celery broker. |
+| Redis | Celery broker, and failed-login counts shared by the API processes. |
 
 ## Code layout
 
