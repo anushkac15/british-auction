@@ -64,6 +64,8 @@ export function AuctionDetail() {
         </div>
       </div>
 
+      {(live === "CLOSED" || live === "FORCE_CLOSED") && <ClosedResult rfq={rfq} isSupplier={isSupplier} />}
+
       <div className="grid-4">
         {live === "UPCOMING" ? (
           <Countdown label="Bidding opens in" target={rfq.bid_start_at} nowMs={now} />
@@ -142,6 +144,57 @@ function ConfigCard({ rfq, wide }: { rfq: RfqDetail; wide?: boolean }) {
       </div>
       <div className="small">Trigger: {TRIGGER_LABEL[trigger_type]}</div>
       <div className="muted small">Never extends past the forced close ({formatTime(rfq.forced_close_at)}).</div>
+    </div>
+  );
+}
+
+function ClosedResult({ rfq, isSupplier }: { rfq: RfqDetail; isSupplier: boolean }) {
+  if (rfq.participant_count === 0) {
+    return (
+      <div className="card result-card result-empty">
+        <h3>Auction Closed</h3>
+        <p className="muted">No bids were received.</p>
+      </div>
+    );
+  }
+
+  if (!isSupplier) {
+    const winner = rfq.ranking[0];
+    return (
+      <div className="card result-card">
+        <h3>Auction Closed</h3>
+        <dl className="result-list">
+          <dt>Winning Supplier</dt>
+          <dd>{winner.supplier_name}</dd>
+          <dt>Winning Bid</dt>
+          <dd>{formatMoney(winner.quote.total_price)}</dd>
+          <dt>Rank</dt>
+          <dd>{winner.label}</dd>
+        </dl>
+      </div>
+    );
+  }
+
+  if (rfq.my_rank === 1) {
+    return (
+      <div className="card result-card">
+        <h3>Auction Closed</h3>
+        <p>
+          <strong>You won</strong> with a bid of <strong>{formatMoney(rfq.my_best_bid)}</strong> (L1).
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card result-card result-lost">
+      <h3>Auction Closed</h3>
+      <dl className="result-list">
+        <dt>Winning Bid</dt>
+        <dd>{formatMoney(rfq.lowest_bid)}</dd>
+        <dt>Your final rank</dt>
+        <dd>{rfq.my_rank ? `L${rfq.my_rank} of ${rfq.participant_count}` : "You did not bid"}</dd>
+      </dl>
     </div>
   );
 }
