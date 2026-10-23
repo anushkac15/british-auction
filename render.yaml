@@ -7,8 +7,8 @@
 # No Celery worker runs here: auction status is resolved from the server clock on every read and bid,
 # and opening an RFQ persists any missed transitions. docker-compose.yml runs the dedicated worker.
 #
-# If Render gives the API a different URL than https://british-auction-api.onrender.com
-# (the name was taken), update the /api/* rewrite on british-auction-web to match.
+# The /api/* rewrite on british-auction-web must point at the API's actual URL. Render adds a suffix
+# (e.g. -mml8) when the name is taken, so a fork deployed elsewhere needs its own URL here.
 
 databases:
   - name: british-auction-db
@@ -63,7 +63,7 @@ services:
     routes:
       - type: rewrite
         source: /api/*
-        destination: https://british-auction-api.onrender.com/api/*
+        destination: https://british-auction-api-mml8.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html

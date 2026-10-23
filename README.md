@@ -253,9 +253,9 @@ React (static site) ──/api/*──► FastAPI ──► PostgreSQL   (data +
 1. Push this repository to your GitHub account.
 2. Sign up at [render.com](https://render.com) with GitHub, choose **New → Blueprint**, and select the repository.
    Render creates the database, Redis, the API and the website, and generates a secret key.
-3. When the first deploy finishes, open the API service and check its address. If it isn't
-   `https://british-auction-api.onrender.com` (the name was already taken), edit the `/api/*` rewrite rule on
-   `british-auction-web` to use the real address.
+3. When the first deploy finishes, open the API service and copy its address (Render adds a suffix such as
+   `-mml8` if the name is taken). Put it in the `/api/*` rewrite at the end of `render.yaml` and push; Render
+   redeploys the website with the new rule.
 4. Open the `british-auction-web` address and register the first buyer and supplier. Demo accounts are not created in
    deployments.
 
