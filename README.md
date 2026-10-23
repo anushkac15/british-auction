@@ -103,6 +103,37 @@ grep SITE_ADDRESS .env                                  # open https://<that add
 - Backups: [`scripts/backup_db.sh`](scripts/backup_db.sh) writes `backups/auction-<time>.sql.gz` and keeps 14 days; schedule it with `crontab -e`
   (the line is in the script). Restore into an empty database: `gunzip -c <file> | docker compose -f docker-compose.prod.yml exec -T postgres psql -U auction auction`
 
+## Free demo on Render (no background worker)
+
+[`render.yaml`](render.yaml) deploys a free demo with no card required:
+
+```
+React (static site) ──/api/*──► FastAPI ──► PostgreSQL   (data + LISTEN/NOTIFY for live updates)
+                                   │
+                                   └──────► Redis        (failed-login counts shared by API processes)
+```
+
+The Celery worker and beat schedule are **not** deployed here, because correctness never depends on them:
+
+- Every list and detail response computes the status from the server clock (`resolve_status`), so it is never stale.
+- Bids are accepted or rejected against the server clock inside the row lock, whatever the stored status says.
+- Opening an RFQ persists any missed transition and writes its `AUCTION_STARTED` / `CLOSED` / `FORCE_CLOSED`
+  entry, stamped with the time it actually happened.
+
+What the worker adds is background consistency: stored statuses and log entries are updated within 15 seconds
+even for RFQs nobody opens. The code stays in the repository, and `docker-compose.prod.yml` (and the local
+`docker-compose.yml`) run it as a dedicated worker container.
+
+1. Sign up at [render.com](https://render.com) with GitHub, choose **New → Blueprint**, and select this repository.
+   Render creates the database, Redis, the API and the static site, and generates `SECRET_KEY`.
+2. After the first deploy, check the API's URL. If it isn't `https://british-auction-api.onrender.com` (the name was taken),
+   edit the `/api/*` rewrite on `british-auction-web` to point at the real URL.
+3. Open the `british-auction-web` URL and register the first buyer and supplier.
+
+Free-plan limits: the API sleeps after 15 idle minutes (the first request then takes 30–60 seconds), and the free
+database is deleted after 30 days. If the live-update stream is cut by the proxy, the page falls back to polling
+every 3 seconds.
+
 ## Tests
 
 The tests run against **real PostgreSQL**, not SQLite, because they depend on `SELECT ... FOR UPDATE`, `DISTINCT ON`, partial
