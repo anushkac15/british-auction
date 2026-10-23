@@ -1,0 +1,12 @@
+# SITE_ADDRESS comes from .env, e.g. 140-238-12-34.sslip.io (no domain needed).
+# Caddy obtains and renews the HTTPS certificate itself and redirects http:// to https://.
+{$SITE_ADDRESS} {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+	}
+	reverse_proxy web:80
+}

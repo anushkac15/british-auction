@@ -99,3 +99,35 @@ def test_tampered_and_expired_tokens_are_rejected(client, users, monkeypatch):
 def test_me_returns_current_user(client, users):
     body = client.get("/api/auth/me", headers=as_user(users["b"])).json()
     assert body["user"] == {"id": users["b"].id, "name": "Supplier Bravo", "email": "b@test", "role": "SUPPLIER"}
+
+
+def login(client, email, password):
+    return client.post("/api/auth/login", json={"email": email, "password": password})
+
+
+def test_repeated_failed_logins_lock_the_email(client):
+    register(client)
+    register(client, email="other@fresh.test")
+    for _ in range(5):
+        assert login(client, "ops@fresh.test", "wrong-pass").status_code == 401
+
+    r = login(client, "OPS@fresh.test", "s3cret-pass")
+    assert r.status_code == 429 and r.json()["code"] == "too_many_attempts"
+    assert "15 minutes" in r.json()["detail"]
+    assert login(client, "other@fresh.test", "s3cret-pass").status_code == 200
+
+
+def test_successful_login_resets_failed_attempts(client):
+    register(client)
+    for _ in range(4):
+        login(client, "ops@fresh.test", "wrong-pass")
+    assert login(client, "ops@fresh.test", "s3cret-pass").status_code == 200
+    for _ in range(4):
+        assert login(client, "ops@fresh.test", "wrong-pass").status_code == 401
+    assert login(client, "ops@fresh.test", "s3cret-pass").status_code == 200
+
+
+def test_unknown_emails_are_throttled_too(client):
+    for _ in range(5):
+        assert login(client, "ghost@fresh.test", "whatever-pass").status_code == 401
+    assert login(client, "ghost@fresh.test", "whatever-pass").status_code == 429

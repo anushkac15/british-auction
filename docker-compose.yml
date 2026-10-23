@@ -5,6 +5,13 @@ x-backend-env: &backend-env
   CORS_ORIGINS: http://localhost:3000,http://localhost:5173
   SWEEP_INTERVAL_SECONDS: "15"
   SECRET_KEY: ${SECRET_KEY:-dev-only-insecure-secret-change-me}
+  SEED_DEMO_USERS: "true"
+  LOGIN_THROTTLE_STORE: redis
+
+x-backend-build: &backend-build
+  context: ./backend
+  args:
+    INSTALL_DEV: "true"
 
 services:
   postgres:
@@ -35,7 +42,7 @@ services:
       retries: 20
 
   api:
-    build: ./backend
+    build: *backend-build
     environment: *backend-env
     ports:
       - "8000:8000"
@@ -49,7 +56,7 @@ services:
       retries: 20
 
   worker:
-    build: ./backend
+    build: *backend-build
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=1
     environment: *backend-env
     depends_on:
@@ -59,7 +66,7 @@ services:
         condition: service_healthy
 
   beat:
-    build: ./backend
+    build: *backend-build
     command: celery -A app.tasks.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     environment: *backend-env
     depends_on:

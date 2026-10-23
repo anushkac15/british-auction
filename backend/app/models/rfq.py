@@ -22,6 +22,7 @@ class Rfq(Base):
         CheckConstraint("bid_close_at <= forced_close_at", name="close_not_after_forced"),
         CheckConstraint("bid_close_at >= original_bid_close_at", name="close_never_moves_back"),
         Index("ix_rfqs_status", "status"),
+        Index("ix_rfqs_buyer_id", "buyer_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -24,7 +24,15 @@ async def lifespan(_: FastAPI):
         broadcaster.stop()
 
 
-app = FastAPI(title="British Auction RFQ", version="1.0.0", lifespan=lifespan)
+docs_enabled = not settings.is_production
+app = FastAPI(
+    title="British Auction RFQ",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs" if docs_enabled else None,
+    redoc_url="/redoc" if docs_enabled else None,
+    openapi_url="/openapi.json" if docs_enabled else None,
+)
 
 app.add_middleware(
     CORSMiddleware,

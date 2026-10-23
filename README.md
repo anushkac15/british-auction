@@ -23,7 +23,8 @@ The app opens on a **Log in** page (`/login`). New users can sign up at **Regist
 **buyer** or a **supplier**. The account type is chosen once and decides what the user can do (`/register?role=supplier`
 preselects supplier). Log out from the header.
 
-The API container runs migrations and seeds demo accounts, all with the password `password123`:
+The API container runs migrations and, because `docker-compose.yml` sets `SEED_DEMO_USERS=true`, seeds demo accounts,
+all with the password `password123`. Deployed environments leave this unset, so no demo accounts exist there:
 
 | Email | Role |
 |---|---|
@@ -61,9 +62,46 @@ cd ../frontend
 npm install && npm run dev                            # http://localhost:5173 (proxies /api to :8000)
 ```
 
-Settings come from environment variables (or `backend/.env`): `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`,
-`SWEEP_INTERVAL_SECONDS`, `SSE_ENABLED`, `SECRET_KEY` (signs login tokens; **set your own** outside local dev, e.g.
-`python -c "import secrets; print(secrets.token_urlsafe(32))"`), and `TOKEN_TTL_MINUTES` (default 720).
+Settings come from environment variables (or `backend/.env`):
+
+| Variable | Default | Notes |
+|---|---|---|
+| `APP_ENV` | `development` | `production` refuses to start without a strong `SECRET_KEY` and hides `/docs` |
+| `DATABASE_URL` | local Postgres | `postgres://` and `postgresql://` URLs from hosting providers are accepted as-is |
+| `REDIS_URL` | `redis://localhost:6379/0` | Celery broker |
+| `SECRET_KEY` | dev-only value | Signs login tokens; at least 32 random characters in production, e.g. `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `TOKEN_TTL_MINUTES` | `720` | Login lifetime |
+| `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_SECONDS` | `5`, `900` | Failed logins per email before it is locked for the window |
+| `LOGIN_THROTTLE_STORE` | `memory` | `redis` (set in both compose files) shares the failed-login count between API processes |
+| `CORS_ORIGINS`, `SWEEP_INTERVAL_SECONDS`, `SSE_ENABLED` | | |
+| `SEED_DEMO_USERS` | unset | `true` makes the container create the demo accounts on start |
+| `PORT`, `WEB_CONCURRENCY` | `8000`, `2` | Port and number of API worker processes in the container |
+
+## Deploying to a VM (e.g. Oracle Cloud Always Free)
+
+[`docker-compose.prod.yml`](docker-compose.prod.yml) runs the full stack on one server: PostgreSQL, Redis, the API,
+the Celery worker and beat, the web app, and [Caddy](https://caddyserver.com) in front for HTTPS. Only ports 80 and
+443 are published, there are no demo accounts, and every container restarts on failure or reboot. No domain is
+needed: `<ip-with-dashes>.sslip.io` resolves to the server, and Caddy gets a real certificate for it.
+
+On an Ubuntu VM with ports 80 and 443 open (in the cloud firewall *and* the VM's own `iptables`):
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker $USER   # then log out and back in
+git clone https://github.com/anushkac15/british-auction.git && cd british-auction
+cat > .env <<EOF
+SITE_ADDRESS=$(curl -s https://ifconfig.me | tr . -).sslip.io
+POSTGRES_PASSWORD=$(openssl rand -hex 24)
+SECRET_KEY=$(openssl rand -hex 32)
+EOF
+docker compose -f docker-compose.prod.yml up -d --build
+grep SITE_ADDRESS .env                                  # open https://<that address>
+```
+
+- Update: `git pull && docker compose -f docker-compose.prod.yml up -d --build`
+- Logs: `docker compose -f docker-compose.prod.yml logs -f api worker`
+- Backups: [`scripts/backup_db.sh`](scripts/backup_db.sh) writes `backups/auction-<time>.sql.gz` and keeps 14 days; schedule it with `crontab -e`
+  (the line is in the script). Restore into an empty database: `gunzip -c <file> | docker compose -f docker-compose.prod.yml exec -T postgres psql -U auction auction`
 
 ## Tests
 
@@ -76,8 +114,10 @@ cd backend && pytest                                   # or: docker compose exec
 # custom DB: TEST_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db pytest
 ```
 
-The 78 tests cover:
-- registration, login, duplicate emails, and tampered or expired tokens
+The 94 tests cover:
+- registration, login, duplicate emails, tampered or expired tokens, and locking an email after repeated failed logins
+- production settings: weak secret keys rejected, provider database URLs accepted, and the Redis-backed login
+  throttle shared between processes (logins allowed if Redis is down)
 - the live-update stream rejecting anonymous users, unknown RFQs, and other buyers' RFQs
 - every trigger type and the rank-change cases below
 - window boundaries, including a bid exactly at close being rejected
@@ -179,6 +219,7 @@ Every response, including errors, contains `server_now`. Money values are JSON s
 - A supplier's new bid must be strictly lower than their own previous bid.
 - Extensions are measured from the current close time, not from the bid time.
 - Any supplier can bid on any RFQ; there are no invitation lists.
-- Auth is email + password with stateless 12-hour tokens. Out of scope: email verification, password reset, and
-  login rate limiting. Logging out clears the token in the browser; issued tokens stay valid until they expire.
+- Auth is email + password with stateless 12-hour tokens. After 5 failed logins an email is locked for 15 minutes;
+  the count lives in Redis, and if Redis is unreachable logins are allowed rather than blocked. Out of scope: email verification and password reset. Logging out clears the token
+  in the browser; issued tokens stay valid until they expire.
 - Neo4j and RabbitMQ aren't used: there's no graph-shaped data, and Redis covers the broker role.

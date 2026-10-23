@@ -13,6 +13,7 @@ TEST_DATABASE_URL = os.environ.get(
 )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["SSE_ENABLED"] = "false"
+os.environ["LOGIN_THROTTLE_STORE"] = "memory"
 
 import psycopg  # noqa: E402
 import pytest  # noqa: E402
@@ -27,6 +28,7 @@ from app.db import SessionLocal, engine  # noqa: E402
 from app.enums import AuctionStatus, EventType, Role, TriggerType  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import AuctionConfig, Rfq, User  # noqa: E402
+from app.routers.auth import login_throttle  # noqa: E402
 from app.security import create_token  # noqa: E402
 from app.services.activity import log_event  # noqa: E402
 
@@ -70,6 +72,7 @@ def clock() -> FrozenClock:
 
 @pytest.fixture
 def client(clock):
+    login_throttle.clear()
     app.dependency_overrides[get_clock] = lambda: clock
     with TestClient(app) as c:
         yield c
