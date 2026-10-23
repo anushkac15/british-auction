@@ -8,8 +8,17 @@ that no extension can pass.
 **Stack:** React + TypeScript (Vite, TanStack Query) · FastAPI (Python 3.11) · PostgreSQL 16 · Redis · Celery ·
 Docker Compose
 
+## Live demo
+
+**<https://british-auction-web.onrender.com>**
+
+Register a buyer account and create an RFQ, then register a supplier in a private window and place bids. It runs on
+Render's free plan, so the first visit after 15 idle minutes takes 30–60 seconds while the server wakes up. To run it
+on your own computer instead, see [Run it on your computer](#run-it-on-your-computer).
+
 ## Contents
 
+- [Live demo](#live-demo)
 - [Features](#features)
 - [How it works](#how-it-works)
 - [Run it on your computer](#run-it-on-your-computer)
